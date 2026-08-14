@@ -1,0 +1,4 @@
+﻿.venv/
+__pycache__/
+*.pyc
+future_oracle.db
