@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Future Oracle</title>
+<div class="oracle-controls">
+    <button onclick="refreshOracle()">
+        🔄 Обновить
+    </button>
+
+    <span id="last-update">
+        Последнее обновление: —
+    </span>
+</div>
+    
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, #18233d 0%, #080b14 45%, #05060b 100%);
+            color: #ffffff;
+        }
+
+        .container {
+            width: min(1100px, 92%);
+            margin: 0 auto;
+            padding: 50px 0;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            margin-top: 10px;
+            color: #8d98ad;
+            font-size: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 22px;
+        }
+
+        .card {
+            background: rgba(17, 23, 38, 0.88);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 22px;
+            padding: 28px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+        }
+
+        .asset {
+            color: #9aa5bb;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .price {
+            font-size: 42px;
+            font-weight: 700;
+        }
+
+        .change {
+            margin-top: 8px;
+            font-size: 17px;
+        }
+
+        .positive {
+            color: #35d07f;
+        }
+
+        .negative {
+            color: #ff5f6d;
+        }
+
+        .neutral {
+            color: #f2c94c;
+        }
+
+        .prediction-card {
+            text-align: center;
+        }
+
+        .prediction {
+            font-size: 48px;
+            font-weight: 800;
+            margin: 15px 0;
+        }
+
+        .confidence {
+            color: #aab4c8;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .stat {
+            background: rgba(255,255,255,0.04);
+            padding: 18px;
+            border-radius: 15px;
+        }
+
+        .stat-title {
+            color: #8994a9;
+            font-size: 13px;
+            margin-bottom: 7px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .fear {
+            margin-top: 25px;
+        }
+
+        .fear-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .bar {
+            height: 12px;
+            background: #252c3d;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }
+
+        .reasons {
+            margin-top: 25px;
+        }
+
+        .reason {
+            padding: 13px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            color: #c7cedc;
+            line-height: 1.5;
+        }
+
+        .reason:last-child {
+            border-bottom: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: #8d98ad;
+            padding: 30px;
+        }
+
+        .error {
+            text-align: center;
+            color: #ff5f6d;
+            padding: 30px;
+        }
+        .oracle-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.oracle-controls button {
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    background: #273452;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.oracle-controls button:hover {
+    background: #34456d;
+    transform: translateY(-1px);
+}
+
+#last-update {
+    color: #8994a9;
+    font-size: 13px;
+}
+
+        /* ==============================
+           HISTORY
+        ============================== */
+
+        .history-section {
+            margin-top: 40px;
+        }
+        .history-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 20px 24px;
+
+    background: rgba(17, 23, 38, 0.88);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.25s ease,
+        border-color 0.25s ease,
+        transform 0.2s ease;
+}
+
+.history-toggle:hover {
+    background: rgba(25, 33, 54, 0.95);
+    border-color: rgba(255,255,255,0.15);
+}
+
+#history-arrow {
+    color: #8994a9;
+    font-size: 14px;
+
+    transition: transform 0.25s ease;
+}
+
+.history-content {
+    display: none;
+    margin-top: 15px;
+
+    max-height: 400px;
+    overflow-y: auto;
+
+    padding-right: 8px;
+}
+
+.history-content.open {
+    display: block;
+}
+.history-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.history-content::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+}
+
+.history-content::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.18);
+    border-radius: 10px;
+}
+
+.history-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.history-toggle.open #history-arrow {
+    transform: rotate(180deg);
+}
+
+        .history-section h2,
+        .charts-section h2 {
+            margin-bottom: 20px;
+        }
+
+        .history-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .history-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    background: rgba(17, 23, 38, 0.88);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+
+
+.history-item span {
+    color: #8994a9;
+}
+
+        .history-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .history-right {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .history-date {
+            color: #8994a9;
+            font-size: 13px;
+        }
+
+        .history-score {
+            font-weight: 700;
+        }
+
+        /* ==============================
+           CHARTS
+        ============================== */
+
+        .charts-section {
+            margin-top: 40px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .chart-card {
+    margin-top: 25px;
+    padding: 25px;
+    border-radius: 20px;
+    background: rgba(17, 23, 38, 0.88);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+.chart-card h3 {
+    color: #ffffff;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.chart-card canvas {
+    width: 100% !important;
+    max-height: 350px;
+}
+
+        .chart-card h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 320px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 35px;
+            color: #5f697d;
+            font-size: 13px;
+        }
+        .chart-card canvas {
+    width: 100% !important;
+    height: 320px !important;
+}
+.history-prediction {
+    font-weight: 800;
+}
+
+.history-up {
+    color: #35d07f !important;
+}
+
+.history-down {
+    color: #ff5f6d !important;
+}
+
+.history-neutral {
+    color: #f2c94c !important;
+}
+        @media (max-width: 800px) {
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .logo {
+                font-size: 34px;
+            }
+
+            .price {
+                font-size: 34px;
+            }
+
+            .prediction {
+                font-size: 40px;
+            }
+
+            .history-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .history-right {
+                justify-content: flex-start;
+            }
+        }
+
+        /* ==============================
+   MODEL ACCURACY
+============================== */
+
+.accuracy-section {
+    margin-top: 40px;
+}
+
+.accuracy-card {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 25px;
+    padding: 25px;
+    border-radius: 20px;
+    background: rgba(17, 23, 38, 0.88);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+.accuracy-main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.accuracy-value {
+    font-size: 46px;
+    font-weight: 800;
+    color: #35d07f;
+}
+
+.accuracy-label {
+    margin-top: 8px;
+    color: #8994a9;
+}
+
+.accuracy-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.accuracy-stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.04);
+}
+
+.accuracy-stat span {
+    color: #8994a9;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.accuracy-stat strong {
+    font-size: 25px;
+}
+
+.accuracy-stat.correct strong {
+    color: #35d07f;
+}
+
+.accuracy-stat.wrong strong {
+    color: #ff5f6d;
+}
+
+@media (max-width: 800px) {
+
+    .accuracy-card {
+        grid-template-columns: 1fr;
+    }
+
+    .accuracy-stats {
+        grid-template-columns: 1fr;
+    }
+}
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <div class="logo">🔮 FUTURE ORACLE</div>
+
+        <div class="subtitle">
+            Bitcoin market prediction engine
+        </div>
+    </header>
+
+
+    <!-- ==========================================
+         CURRENT PREDICTION
+    =========================================== -->
+
+    <div id="app">
+
+        <div class="loading">
+            Получаем данные рынка...
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         HISTORY
+    =========================================== -->
+<!-- ==========================================
+     MODEL ACCURACY
+=========================================== -->
+
+<section class="accuracy-section">
+
+    <h2>🎯 Точность модели</h2>
+
+    <div class="accuracy-card">
+
+        <div class="accuracy-main">
+            <div class="accuracy-value" id="accuracyValue">
+                —
+            </div>
+
+            <div class="accuracy-label">
+                Точность прогнозов
+            </div>
+        </div>
+
+        <div class="accuracy-stats">
+
+            <div class="accuracy-stat">
+                <span>Проверено</span>
+                <strong id="accuracyTotal">—</strong>
+            </div>
+
+            <div class="accuracy-stat correct">
+                <span>Правильных</span>
+                <strong id="accuracyCorrect">—</strong>
+            </div>
+
+            <div class="accuracy-stat wrong">
+                <span>Ошибочных</span>
+                <strong id="accuracyWrong">—</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+    <section class="history-section">
+
+    <button class="history-toggle" onclick="toggleHistory()">
+        <span>📜 История прогнозов</span>
+        <span id="history-arrow">▼</span>
+    </button>
+
+    <div id="history-content" class="history-content">
+
+        <div id="history" class="history-list">
+
+            <div class="loading">
+                Загрузка истории...
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+    <!-- ==========================================
+         CHARTS
+    =========================================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <section class="charts-section">
+
+        <h2>📊 Аналитика Future Oracle</h2>
+
+        <div class="charts-grid">
+
+            <div class="chart-card">
+
+                <h3>Цена Bitcoin</h3>
+
+                <div class="chart-wrapper">
+                    <canvas id="priceChart"></canvas>
+                </div>
+
+            </div>
+
+
+            <div class="chart-card">
+
+                <h3>Fear & Greed</h3>
+
+                <div class="chart-wrapper">
+                    <canvas id="fearGreedChart"></canvas>
+                </div>
+
+            </div>
+
+
+            <div class="chart-card">
+
+                <h3>Prediction Score</h3>
+
+                <div class="chart-wrapper">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <footer>
+        Future Oracle · Experimental market analysis
+    </footer>
+
+</div>
+
+
+<script>
+
+/* ==================================================
+   CURRENT PREDICTION
+================================================== */
+
+async function loadPrediction() {
+
+    const app = document.getElementById("app");
+
+    try {
+
+        const response = await fetch("/api/prediction");
+
+        if (!response.ok) {
+            throw new Error("API error");
+        }
+
+        const data = await response.json();
+
+
+        const predictionClass =
+    data.prediction === "UP" || data.prediction === "STRONG_UP"
+        ? "positive"
+        : data.prediction === "DOWN" || data.prediction === "STRONG_DOWN"
+            ? "negative"
+            : "neutral";
+
+
+        const predictionText =
+    data.prediction === "STRONG_UP"
+        ? "🚀 СИЛЬНЫЙ РОСТ"
+        : data.prediction === "UP"
+            ? "РОСТ"
+            : data.prediction === "STRONG_DOWN"
+                ? "🔻 СИЛЬНОЕ СНИЖЕНИЕ"
+                : data.prediction === "DOWN"
+                    ? "СНИЖЕНИЕ"
+                    : "НЕЙТРАЛЬНО";
+
+
+        const changeClass =
+            data.data.change_24h_percent >= 0
+                ? "positive"
+                : "negative";
+
+
+        app.innerHTML = `
+
+            <div class="grid">
+
+                <div class="card">
+
+                    <div class="asset">
+                        ${data.asset}
+                    </div>
+
+                    <div class="price">
+                        $${Number(data.data.price_usd).toLocaleString()}
+                    </div>
+
+                    <div class="change ${changeClass}">
+                        ${Number(data.data.change_24h_percent).toFixed(2)}%
+                        за 24 часа
+                    </div>
+
+
+                    <div class="stats">
+
+                        <div class="stat">
+
+                            <div class="stat-title">
+                                Торговый объём
+                            </div>
+
+                            <div class="stat-value">
+                                $${(
+                                    Number(data.data.volume_24h_usd) / 1e9
+                                ).toFixed(2)}B
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat">
+
+                            <div class="stat-title">
+                                Score
+                            </div>
+
+                            <div class="stat-value">
+                                ${data.score}
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat">
+
+                            <div class="stat-title">
+                                Risk
+                            </div>
+
+                            <div class="stat-value">
+                                ${data.risk}
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat">
+
+                            <div class="stat-title">
+                                Confidence
+                            </div>
+
+                            <div class="stat-value">
+                                ${data.confidence}%
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="fear">
+
+                        <div class="fear-header">
+
+                            <span>
+                                Fear & Greed
+                            </span>
+
+                            <strong>
+                                ${data.data.fear_greed_value}/100
+                            </strong>
+
+                        </div>
+
+
+                        <div class="bar">
+
+                            <div
+                                class="bar-fill"
+                                style="
+                                    width:${data.data.fear_greed_value}%;
+                                    background:
+                                        ${data.data.fear_greed_value < 45
+                                            ? "#ff5f6d"
+                                            : data.data.fear_greed_value < 55
+                                                ? "#f2c94c"
+                                                : "#35d07f"};
+                                "
+                            ></div>
+
+                        </div>
+
+
+                        <div style="margin-top:10px;color:#8d98ad;">
+                            ${data.data.fear_greed_classification}
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="card prediction-card">
+
+                    <div class="asset">
+                        ПРОГНОЗ
+                    </div>
+
+
+                    <div class="prediction ${predictionClass}">
+                        ${predictionText}
+                    </div>
+
+
+                    <div class="confidence">
+
+                        Уверенность модели:
+
+                        <strong>
+                            ${data.confidence}%
+                        </strong>
+
+                    </div>
+
+
+                    <div class="stats">
+
+                        <div class="stat">
+
+                            <div class="stat-title">
+                                Price Score
+                            </div>
+
+                            <div class="stat-value">
+                                ${data.scoring.price_score}
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat">
+
+                            <div class="stat-title">
+                                Fear & Greed Score
+                            </div>
+
+                            <div class="stat-value">
+                                ${data.scoring.fear_greed_score}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="reasons">
+
+                        <div class="asset">
+                            ПОЧЕМУ?
+                        </div>
+
+
+                        ${data.reasons.map(reason => `
+
+                            <div class="reason">
+                                ${reason}
+                            </div>
+
+                        `).join("")}
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        app.innerHTML = `
+
+            <div class="card error">
+
+                Не удалось получить данные от API.
+
+                <br><br>
+
+                Проверь, запущен ли сервер.
+
+            </div>
+
+        `;
+    }
+}
+
+
+/* ==================================================
+   HISTORY
+================================================== */
+function toggleHistory() {
+
+    const content = document.getElementById("history-content");
+    const button = document.querySelector(".history-toggle");
+
+    content.classList.toggle("open");
+    button.classList.toggle("open");
+
+}
+async function loadHistory() {
+
+    try {
+
+        const response = await fetch("/api/history");
+
+        if (!response.ok) {
+            throw new Error("Ошибка загрузки истории");
+        }
+
+        const data = await response.json();
+
+        const container = document.getElementById("history");
+
+
+        if (!data.predictions || data.predictions.length === 0) {
+
+            container.innerHTML = `
+                <div class="card">
+                    История прогнозов пока пуста.
+                </div>
+            `;
+
+            return;
+        }
+
+
+        container.innerHTML = data.predictions.map(item => {
+
+            const date =
+                new Date(item.created_at)
+                    .toLocaleString("ru-RU");
+
+
+           const predictionClass =
+    data.prediction === "UP" || data.prediction === "STRONG_UP"
+        ? "positive"
+        : data.prediction === "DOWN" || data.prediction === "STRONG_DOWN"
+            ? "negative"
+            : "neutral";
+
+
+            const predictionText =
+    data.prediction === "STRONG_UP"
+        ? "🚀 СИЛЬНЫЙ РОСТ"
+        : data.prediction === "UP"
+            ? "РОСТ"
+            : data.prediction === "STRONG_DOWN"
+                ? "🔻 СИЛЬНОЕ СНИЖЕНИЕ"
+                : data.prediction === "DOWN"
+                    ? "СНИЖЕНИЕ"
+                    : "НЕЙТРАЛЬНО";
+
+
+            return `
+
+                <div class="history-item">
+
+                    <div class="history-left">
+
+                        <strong>
+                            ${item.asset}
+                        </strong>
+
+                        <span class="history-date">
+                            ${date}
+                        </span>
+
+                    </div>
+
+
+                    <div class="history-right">
+
+                        <strong class="${predictionClass}">
+                            ${predictionText}
+                        </strong>
+
+                        <span>
+                            Score:
+                            <strong class="history-score">
+                                ${item.score}
+                            </strong>
+                        </span>
+
+                        <span>
+                            Уверенность:
+                            ${item.confidence}%
+                        </span>
+
+                        <span>
+                            Риск:
+                            ${item.risk}
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }).join("");
+
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка истории:",
+            error
+        );
+
+        document.getElementById("history").innerHTML = `
+
+            <div class="card error">
+                Не удалось загрузить историю.
+            </div>
+
+        `;
+    }
+}
+
+
+
+/* ==================================================
+   LOAD CHARTS
+================================================== */
+
+let priceChart = null;
+let fearGreedChart = null;
+let scoreChart = null;
+
+
+async function loadCharts() {
+
+    try {
+
+        const response = await fetch(
+            "/api/history/predictions"
+        );
+
+        if (!response.ok) {
+            throw new Error("Ошибка загрузки данных графиков");
+        }
+
+        const result = await response.json();
+
+        const data = result.data || [];
+
+        if (data.length === 0) {
+
+            console.log("История для графиков пока пуста");
+
+            return;
+        }
+
+
+        // --------------------------------------------------
+        // Данные
+        // --------------------------------------------------
+
+        // API возвращает новые записи сначала.
+        // Для графика разворачиваем их:
+        // старые -> новые
+
+        const chartData = [...data].reverse();
+
+
+        const labels = chartData.map(item => {
+
+            const date = new Date(item.created_at);
+
+            return date.toLocaleString(
+                "ru-RU",
+                {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            );
+
+        });
+
+
+        const prices = chartData.map(
+            item => Number(item.price)
+        );
+
+
+        const fearGreed = chartData.map(
+            item => Number(item.fear_greed_value)
+        );
+
+
+        const scores = chartData.map(
+            item => Number(item.score)
+        );
+
+
+        // --------------------------------------------------
+        // Удаляем старые графики
+        // --------------------------------------------------
+
+        if (priceChart) {
+            priceChart.destroy();
+        }
+
+        if (fearGreedChart) {
+            fearGreedChart.destroy();
+        }
+
+        if (scoreChart) {
+            scoreChart.destroy();
+        }
+
+
+        // --------------------------------------------------
+        // Общие настройки
+        // --------------------------------------------------
+
+        const commonOptions = {
+
+            responsive: true,
+
+            maintainAspectRatio: false,
+
+            interaction: {
+                intersect: false,
+                mode: "index"
+            },
+
+            plugins: {
+
+                legend: {
+                    labels: {
+                        color: "#ffffff"
+                    }
+                }
+
+            },
+
+            scales: {
+
+                x: {
+
+                    ticks: {
+                        color: "#8994a9"
+                    },
+
+                    grid: {
+                        color: "rgba(255,255,255,0.05)"
+                    }
+
+                },
+
+                y: {
+
+                    ticks: {
+                        color: "#8994a9"
+                    },
+
+                    grid: {
+                        color: "rgba(255,255,255,0.05)"
+                    }
+
+                }
+
+            }
+
+        };
+
+
+        // --------------------------------------------------
+        // PRICE CHART
+        // --------------------------------------------------
+
+        priceChart = new Chart(
+            document.getElementById("priceChart"),
+            {
+
+                type: "line",
+
+                data: {
+
+                    labels: labels,
+
+                    datasets: [
+
+                        {
+
+                            label: "BTC USD",
+
+                            data: prices,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 3,
+
+                            fill: false
+
+                        }
+
+                    ]
+
+                },
+
+                options: commonOptions
+
+            }
+        );
+
+
+        // --------------------------------------------------
+        // FEAR & GREED CHART
+        // --------------------------------------------------
+
+        fearGreedChart = new Chart(
+            document.getElementById("fearGreedChart"),
+            {
+
+                type: "line",
+
+                data: {
+
+                    labels: labels,
+
+                    datasets: [
+
+                        {
+
+                            label: "Fear & Greed",
+
+                            data: fearGreed,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 3,
+
+                            fill: false
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    ...commonOptions,
+
+                    scales: {
+
+                        ...commonOptions.scales,
+
+                        y: {
+
+                            ...commonOptions.scales.y,
+
+                            min: 0,
+
+                            max: 100
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        // --------------------------------------------------
+        // SCORE CHART
+        // --------------------------------------------------
+
+        scoreChart = new Chart(
+            document.getElementById("scoreChart"),
+            {
+
+                type: "line",
+
+                data: {
+
+                    labels: labels,
+
+                    datasets: [
+
+                        {
+
+                            label: "Prediction Score",
+
+                            data: scores,
+
+                            tension: 0.3,
+
+                            borderWidth: 2,
+
+                            pointRadius: 3,
+
+                            fill: false
+
+                        }
+
+                    ]
+
+                },
+
+                options: commonOptions
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка загрузки графиков:",
+            error
+        );
+
+    }
+
+}
+/* ==================================================
+   MODEL ACCURACY
+================================================== */
+
+async function loadAccuracy() {
+
+    try {
+
+        const response = await fetch("/api/accuracy");
+
+        if (!response.ok) {
+            throw new Error("Ошибка загрузки точности");
+        }
+
+        const data = await response.json();
+
+        document.getElementById("accuracyValue").textContent =
+            data.accuracy + "%";
+
+        document.getElementById("accuracyTotal").textContent =
+            data.total;
+
+        document.getElementById("accuracyCorrect").textContent =
+            data.correct;
+
+        document.getElementById("accuracyWrong").textContent =
+            data.wrong;
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка загрузки точности:",
+            error
+        );
+
+    }
+}
+
+/* ==================================================
+   START
+================================================== */
+
+loadPrediction();
+
+loadHistory();
+
+loadCharts();
+
+loadAccuracy();
+
+/*
+ * Обновляем всё раз в минуту.
+ */
+
+setInterval(() => {
+
+    loadPrediction();
+
+    loadHistory();
+
+    loadCharts();
+
+    loadAccuracy();
+
+}, 60000);
+function updateLastUpdate() {
+    const element = document.getElementById("last-update");
+
+    if (!element) {
+        return;
+    }
+
+    element.textContent =
+        "Последнее обновление: " +
+        new Date().toLocaleString("ru-RU");
+}
+
+
+async function refreshOracle() {
+
+    const button = document.querySelector(".oracle-controls button");
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "⏳ Обновление...";
+    }
+
+    try {
+
+        await loadPrediction();
+        await loadHistory();
+        await loadCharts();
+
+        updateLastUpdate();
+
+    } catch (error) {
+
+        console.error("Ошибка обновления:", error);
+
+    } finally {
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "🔄 Обновить";
+        }
+
+    }
+}
+</script>
+
+</body>
+</html>
